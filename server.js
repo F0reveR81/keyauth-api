@@ -3,11 +3,20 @@ const axios = require("axios");
 const cors = require("cors");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // Railway 會自動分配 PORT
 
-// 使用 Middleware
 app.use(express.json());
 app.use(cors());
+
+// 你的 API 路由
+app.get("/", (req, res) => {
+    res.send("🚀 KeyAuth API 運行中！");
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 伺服器運行中：http://localhost:${PORT}`);
+});
+
 
 // KeyAuth 環境變數
 const KEYAUTH_APP_ID = process.env.KEYAUTH_APP_ID;
