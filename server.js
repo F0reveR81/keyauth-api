@@ -1,4 +1,5 @@
 require("dotenv").config();
+console.log("OWNER_ID:", process.env.KEYAUTH_OWNER_ID); // 確認變數是否正確載入
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
