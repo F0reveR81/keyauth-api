@@ -1,49 +1,61 @@
 require("dotenv").config();
-console.log("OWNER_ID:", process.env.KEYAUTH_OWNER_ID); // 確認變數是否正確載入
 const express = require("express");
-const axios = require("axios");
 const cors = require("cors");
+const axios = require("axios");
 
 const app = express();
-const PORT = process.env.PORT || 3000; // 使用 Railway 自動分配的 PORT
+const PORT = process.env.PORT || 8080;
 
+app.use(cors());
 app.use(express.json());
-app.use(cors()); // 允許跨來源請求
 
-// 測試 API 是否運行
+// 環境變數 (從 Railway Variables 讀取)
+const OWNER_ID = process.env.KEYAUTH_OWNER_ID;
+const APP_ID = process.env.KEYAUTH_APP_ID;
+const SECRET = process.env.KEYAUTH_SECRET;
+const BASE_URL = "https://keyauth.win/api/1.2/";
+
+if (!OWNER_ID || !APP_ID || !SECRET) {
+  console.error("❌ 環境變數缺失，請在 Railway 設定 KEYAUTH_OWNER_ID, KEYAUTH_APP_ID, KEYAUTH_SECRET");
+  process.exit(1);
+}
+
+// ✅ 測試 API 是否正常
 app.get("/", (req, res) => {
-    res.send("🚀 KeyAuth API 運行中！");
+  res.json({ message: "🚀 KeyAuth API 運行中" });
 });
 
-// KeyAuth 登入 API
+// ✅ 用戶登入 (透過 KeyAuth 驗證)
 app.post("/login", async (req, res) => {
-    const { username, password } = req.body;
+  const { username, password } = req.body;
 
-    if (!username || !password) {
-        return res.status(400).json({ success: false, message: "請提供帳號和密碼" });
+  if (!username || !password) {
+    return res.status(400).json({ success: false, message: "請輸入帳號與密碼" });
+  }
+
+  try {
+    const response = await axios.post(`${BASE_URL}?type=login`, {
+      ownerid: OWNER_ID,
+      appid: APP_ID,
+      secret: SECRET,
+      username,
+      pass: password,
+    });
+
+    const data = response.data;
+
+    if (data.success) {
+      res.json({ success: true, message: "登入成功", token: data.sessionid });
+    } else {
+      res.status(401).json({ success: false, message: data.message });
     }
-
-    try {
-        const response = await axios.post("https://keyauth.win/api/1.2/", {
-            type: "login",
-            username: username,
-            pass: password,
-            ownerid: process.env.KEYAUTH_OWNER_ID,
-            appid: process.env.KEYAUTH_APP_ID,
-            secret: process.env.KEYAUTH_SECRET
-        });
-
-        if (response.data.success) {
-            res.json({ success: true, message: "登入成功", token: response.data.sessionid });
-        } else {
-            res.status(401).json({ success: false, message: response.data.message });
-        }
-    } catch (error) {
-        res.status(500).json({ success: false, message: "伺服器錯誤", error: error.message });
-    }
+  } catch (error) {
+    console.error("❌ KeyAuth API 錯誤:", error);
+    res.status(500).json({ success: false, message: "伺服器錯誤" });
+  }
 });
 
-// 監聽 0.0.0.0，確保外部可訪問
-app.listen(PORT, "0.0.0.0", () => {
-    console.log(`🚀 伺服器運行中：http://localhost:${PORT}`);
+// ✅ 伺服器啟動
+app.listen(PORT, () => {
+  console.log(`🚀 伺服器運行中：http://localhost:${PORT}`);
 });
